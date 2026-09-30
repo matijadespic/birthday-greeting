@@ -22,6 +22,7 @@ export const content = {
   media: {
     fireworksVideo: '/media/firework.mp4',
     worryVideo: '/media/leave-worries.mp4',
+    worryPoster: '/media/leave-worries-poster.jpg',
     cocktailShaking: '/media/cocktail-shaking.jpeg',
     cocktailPouring: '/media/cocktail-pouring.jpeg',
     cocktailServing: '/media/cocktail-serving.jpeg',

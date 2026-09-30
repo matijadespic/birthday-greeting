@@ -82,27 +82,54 @@ export function LeaveWorries({ copy, media, onNext }) {
     const video = videoRef.current
     if (!video || !media.worryVideo) return undefined
 
-    const onMeta = () => {
+    let cancelled = false
+
+    const markReady = () => {
+      if (cancelled) return
       durationRef.current = video.duration || 0
       setVideoReady(Number.isFinite(video.duration) && video.duration > 0)
-      video.pause()
-      video.currentTime = 0
     }
 
-    const onError = () => setVideoReady(false)
+    const paintFirstFrame = () => {
+      if (cancelled) return
+      markReady()
+      // Force-decode a near-first frame so paused scrubbers are not a black box.
+      const paint = () => {
+        try {
+          video.currentTime = 0.04
+        } catch {
+          // Ignore seek errors while the element is settling.
+        }
+      }
+      if (video.readyState >= 2) paint()
+      else video.addEventListener('loadeddata', paint, { once: true })
+    }
 
-    video.addEventListener('loadedmetadata', onMeta)
+    const onError = () => {
+      if (!cancelled) setVideoReady(false)
+    }
+
+    video.addEventListener('loadedmetadata', paintFirstFrame)
+    video.addEventListener('loadeddata', markReady)
     video.addEventListener('error', onError)
     video.preload = 'auto'
     video.muted = true
     video.playsInline = true
     video.setAttribute('playsinline', '')
     video.setAttribute('webkit-playsinline', '')
+    // Kick loading on iOS / Safari.
+    try {
+      video.load()
+    } catch {
+      // Ignore.
+    }
 
-    if (video.readyState >= 1) onMeta()
+    if (video.readyState >= 1) paintFirstFrame()
 
     return () => {
-      video.removeEventListener('loadedmetadata', onMeta)
+      cancelled = true
+      video.removeEventListener('loadedmetadata', paintFirstFrame)
+      video.removeEventListener('loadeddata', markReady)
       video.removeEventListener('error', onError)
       video.pause()
     }
@@ -207,20 +234,31 @@ export function LeaveWorries({ copy, media, onNext }) {
     >
       <div className="worries-atmosphere" aria-hidden="true" />
 
-      {media.worryVideo ? (
+      {media.worryVideo || media.worryPoster ? (
         <div
           className={`worries-video-layer is-visible${showReveal ? ' is-fading' : ''}`}
           aria-hidden="true"
         >
-          <video
-            ref={videoRef}
-            className={`worries-video${videoReady ? ' is-ready' : ''}`}
-            src={media.worryVideo}
-            muted
-            playsInline
-            preload="auto"
-            tabIndex={-1}
-          />
+          {media.worryPoster ? (
+            <img
+              className="worries-poster"
+              src={media.worryPoster}
+              alt=""
+              decoding="async"
+            />
+          ) : null}
+          {media.worryVideo ? (
+            <video
+              ref={videoRef}
+              className={`worries-video${videoReady ? ' is-ready' : ' is-pending'}`}
+              src={media.worryVideo}
+              poster={media.worryPoster || undefined}
+              muted
+              playsInline
+              preload="auto"
+              tabIndex={-1}
+            />
+          ) : null}
           <div className="worries-video-scrim" />
         </div>
       ) : null}

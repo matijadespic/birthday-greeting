@@ -399,15 +399,30 @@ body {
     linear-gradient(180deg, rgba(11, 9, 18, 0.35) 0%, rgba(11, 9, 18, 0.18) 45%, rgba(11, 9, 18, 0.78) 100%);
 }
 
+.worries-poster,
 .worries-video {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0;
   border: 0;
+}
+
+.worries-poster {
+  z-index: 0;
+  background: #0b0912;
+}
+
+.worries-video {
+  z-index: 1;
+  opacity: 0;
   background: transparent;
+  transition: opacity 0.35s ease;
+}
+
+.worries-video.is-pending {
+  opacity: 0;
 }
 
 .worries-video.is-ready {
@@ -417,6 +432,7 @@ body {
 .worries-video-scrim {
   position: absolute;
   inset: 0;
+  z-index: 2;
   background:
     linear-gradient(180deg, rgba(11, 9, 18, 0.55) 0%, rgba(11, 9, 18, 0.28) 42%, rgba(11, 9, 18, 0.82) 100%),
     radial-gradient(120% 70% at 50% 100%, rgba(11, 9, 18, 0.55), transparent 55%);
