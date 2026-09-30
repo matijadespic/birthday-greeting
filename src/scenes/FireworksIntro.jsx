@@ -1,16 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { markAudioUnlocked } from '../audioGate.js'
+import { tryStartAmbient, unmuteAndPlayAmbient } from '../ambientBed.js'
 
 export function FireworksIntro({ copy, recipientName, videoSrc, onNext }) {
   const videoRef = useRef(null)
   const reduceMotion = useReducedMotion()
   const fadeSeconds = reduceMotion ? 0.01 : (copy.fadeMs ?? 800) / 1000
   const buttonLeadMs = copy.buttonLeadMs ?? 2800
+  const videoVolume = copy.videoVolume ?? 0.78
   const [phase, setPhase] = useState('boot')
   const [lineIndex, setLineIndex] = useState(-1)
   const [showButton, setShowButton] = useState(false)
   const [muted, setMuted] = useState(true)
+  const [needsGesture, setNeedsGesture] = useState(false)
   const soundUnlocked = useRef(false)
 
   const showingCinematic = phase === 'playing' || phase === 'fallback'
@@ -35,36 +38,31 @@ export function FireworksIntro({ copy, recipientName, videoSrc, onNext }) {
   const unlockSound = useCallback(() => {
     if (soundUnlocked.current) return
     const video = videoRef.current
-    if (!video || phase !== 'playing') return
 
     soundUnlocked.current = true
-    video.muted = false
-    setMuted(false)
+    setNeedsGesture(false)
 
-    if (video.paused) {
-      video.muted = true
-      setMuted(true)
-      soundUnlocked.current = false
-      video.play().catch(() => {})
-      return
+    if (video) {
+      video.volume = videoVolume
+      video.muted = false
+      setMuted(false)
+      if (video.paused && phase !== 'ended') {
+        const resume = video.play()
+        if (resume && typeof resume.then === 'function') {
+          resume.catch(() => {
+            video.muted = true
+            setMuted(true)
+            soundUnlocked.current = false
+            setNeedsGesture(true)
+            video.play().catch(() => {})
+          })
+        }
+      }
     }
 
-    const resume = video.play()
-    if (resume && typeof resume.then === 'function') {
-      resume
-        .then(() => {
-          markAudioUnlocked()
-        })
-        .catch(() => {
-          video.muted = true
-          setMuted(true)
-          soundUnlocked.current = false
-          video.play().catch(() => {})
-        })
-    } else {
-      markAudioUnlocked()
-    }
-  }, [phase])
+    markAudioUnlocked()
+    unmuteAndPlayAmbient()
+  }, [phase, videoVolume])
 
   const finish = useCallback(() => {
     freezeLastFrame()
@@ -86,6 +84,7 @@ export function FireworksIntro({ copy, recipientName, videoSrc, onNext }) {
   useEffect(() => {
     if (!videoSrc) {
       setPhase('fallback')
+      tryStartAmbient()
       return undefined
     }
 
@@ -96,32 +95,47 @@ export function FireworksIntro({ copy, recipientName, videoSrc, onNext }) {
     }
 
     let cancelled = false
-    // Stay muted for autoplay policy — sound unlocks on first tap.
-    video.muted = true
     video.playsInline = true
+    video.volume = videoVolume
 
-    const attempt = video.play()
-    if (attempt && typeof attempt.then === 'function') {
-      attempt
-        .then(() => {
-          if (cancelled) return
-          setPhase('playing')
-        })
-        .catch(() => {
-          if (cancelled) return
-          setPhase('fallback')
-        })
-    } else {
-      setPhase('playing')
+    const start = async () => {
+      // Septembar should ride under the fireworks from the first moment.
+      tryStartAmbient()
+
+      // Prefer fireworks with sound; fall back to muted autoplay if the browser blocks it.
+      video.muted = false
+      setMuted(false)
+      try {
+        await video.play()
+        if (cancelled) return
+        soundUnlocked.current = true
+        setNeedsGesture(false)
+        markAudioUnlocked()
+        unmuteAndPlayAmbient()
+        setPhase('playing')
+      } catch {
+        if (cancelled) return
+        video.muted = true
+        setMuted(true)
+        setNeedsGesture(true)
+        try {
+          await video.play()
+          if (!cancelled) setPhase('playing')
+        } catch {
+          if (!cancelled) setPhase('fallback')
+        }
+      }
     }
+
+    start()
 
     return () => {
       cancelled = true
     }
-  }, [videoSrc])
+  }, [videoSrc, videoVolume])
 
   useEffect(() => {
-    if (phase !== 'playing') return undefined
+    if (!needsGesture) return undefined
 
     const onGesture = () => unlockSound()
     window.addEventListener('pointerdown', onGesture, { passive: true })
@@ -131,7 +145,7 @@ export function FireworksIntro({ copy, recipientName, videoSrc, onNext }) {
       window.removeEventListener('pointerdown', onGesture)
       window.removeEventListener('keydown', onGesture)
     }
-  }, [phase, unlockSound])
+  }, [needsGesture, unlockSound])
 
   useEffect(() => {
     if (phase !== 'playing' && phase !== 'fallback') return undefined
@@ -197,6 +211,12 @@ export function FireworksIntro({ copy, recipientName, videoSrc, onNext }) {
       {showingCinematic ? (
         <button type="button" className="intro-skip" onClick={skipCinematic}>
           {copy.skipLabel}
+        </button>
+      ) : null}
+
+      {needsGesture ? (
+        <button type="button" className="intro-sound" onClick={unlockSound}>
+          {copy.tapForSoundLabel || 'Tap for sound'}
         </button>
       ) : null}
 

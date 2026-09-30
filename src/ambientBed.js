@@ -1,6 +1,6 @@
 /** App-wide ambient bed (Septembar) — plays under early scenes until the bar bridge. */
 
-import { isAudioUnlocked, onAudioUnlocked } from './audioGate.js'
+import { isAudioUnlocked, markAudioUnlocked, onAudioUnlocked } from './audioGate.js'
 
 let bed = null
 let src = ''
@@ -18,6 +18,8 @@ function ensureElement() {
   bed.preload = 'auto'
   bed.loop = true
   bed.volume = 0
+  bed.setAttribute('playsinline', '')
+  bed.playsInline = true
   return bed
 }
 
@@ -64,11 +66,43 @@ export function initAmbientBed(musicSrc) {
   ensureElement()
 }
 
+/** Try to start Septembar with sound immediately (may fail under autoplay policy). */
+export function tryStartAmbient() {
+  if (stopped || !src) return Promise.resolve(false)
+  const audio = ensureElement()
+  if (!audio) return Promise.resolve(false)
+
+  audio.muted = false
+  const attempt = audio.play()
+  if (!attempt || typeof attempt.then !== 'function') {
+    fadeTo(targetVolume, 700)
+    markAudioUnlocked()
+    return Promise.resolve(true)
+  }
+
+  return attempt
+    .then(() => {
+      fadeTo(targetVolume, 700)
+      markAudioUnlocked()
+      return true
+    })
+    .catch(() => false)
+}
+
+export function unmuteAndPlayAmbient() {
+  if (stopped) return
+  const audio = ensureElement()
+  if (!audio) return
+  audio.muted = false
+  ensureAmbientPlaying()
+}
+
 export function ensureAmbientPlaying() {
   if (stopped || !isAudioUnlocked()) return
   const audio = ensureElement()
   if (!audio) return
 
+  audio.muted = false
   if (audio.paused) {
     const attempt = audio.play()
     if (attempt && typeof attempt.then === 'function') {
@@ -126,6 +160,6 @@ export function resumeAmbient(volume = 1, fadeMs = 900, { fromStart = false } = 
 
 export function bindAmbientToUnlock() {
   return onAudioUnlocked(() => {
-    if (!stopped) ensureAmbientPlaying()
+    if (!stopped) unmuteAndPlayAmbient()
   })
 }

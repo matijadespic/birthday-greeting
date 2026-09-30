@@ -7,18 +7,17 @@ import {
   resumeAmbient,
   setAmbientVolume,
   stopAmbient,
+  tryStartAmbient,
 } from './ambientBed.js'
 import { SceneChrome } from './components/SceneChrome.jsx'
 import { FireworksIntro } from './scenes/FireworksIntro.jsx'
 import { LeaveWorries } from './scenes/LeaveWorries.jsx'
 import { Cocktail } from './scenes/Cocktail.jsx'
-import { LovedOnes } from './scenes/LovedOnes.jsx'
 import { SingAndDance } from './scenes/SingAndDance.jsx'
 
-const LAST_INDEX = 4
+const LAST_INDEX = 3
 const NAV_LOCK_MS = 480
 const COCKTAIL_INDEX = 2
-const SING_INDEX = 4
 
 const sceneVariants = {
   enter: { opacity: 0, y: 18 },
@@ -57,8 +56,6 @@ function renderScene(index, goNext, onCocktailBridgeStart) {
         />
       )
     case 3:
-      return <LovedOnes copy={scenes.lovedOnes} onNext={goNext} />
-    case 4:
       return <SingAndDance copy={scenes.singAndDance} />
     default:
       return null
@@ -102,14 +99,16 @@ export default function App() {
 
   useEffect(() => {
     initAmbientBed(content.media.septembarMusic || '')
-    return bindAmbientToUnlock()
+    const unbind = bindAmbientToUnlock()
+    tryStartAmbient()
+    return unbind
   }, [])
 
   useEffect(() => {
     const introVolume = content.ambient?.introVolume ?? 0.85
     const barVolume = content.ambient?.barVolume ?? 0.22
 
-    if (index >= SING_INDEX) {
+    if (index > COCKTAIL_INDEX) {
       // Dance scene owns Level Up; Septembar returns only on the closing credits.
       if (!ambientStoppedRef.current) {
         ambientStoppedRef.current = true
@@ -118,7 +117,7 @@ export default function App() {
       return
     }
 
-    if (ambientStoppedRef.current && index < SING_INDEX) {
+    if (ambientStoppedRef.current && index <= COCKTAIL_INDEX) {
       ambientStoppedRef.current = false
       resumeAmbient(index === COCKTAIL_INDEX ? barVolume : introVolume)
       return

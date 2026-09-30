@@ -31,8 +31,8 @@ export const content = {
   },
 
   ambient: {
-    /* Full level before the cocktail bar. */
-    introVolume: 0.85,
+    /* Under fireworks + early scenes — keep room for firework SFX. */
+    introVolume: 0.55,
     /* Quieter under the bartender scene. */
     barVolume: 0.22,
     /* Closing credits typewriter bed. */
@@ -46,6 +46,9 @@ export const content = {
       openLabel: 'Open this, my love ✨',
       keepGoingLabel: 'Keep going',
       skipLabel: 'Skip',
+      tapForSoundLabel: 'Tap for sound',
+      /* Fireworks clip level so Septembar can still be heard underneath. */
+      videoVolume: 0.78,
       fallbackMessage: 'The sky is still yours tonight.',
       /* Milliseconds after play (or fallback) before the first overlay line. */
       startDelayMs: 900,
@@ -110,58 +113,6 @@ export const content = {
       },
       /* Short interstitial after Cheers before the next scene. */
       bridgeFallbackMs: 2800,
-    },
-    lovedOnes: {
-      keepGoingLabel: 'Keep going',
-      previousLabel: 'Previous',
-      nextLabel: 'Next',
-      progressLabel: 'Loved ones photos',
-      placeholderLabel: 'A photo of someone who loves you.',
-      /* Each slide: src, caption, optional focus (CSS object-position), optional alt. */
-      slides: [
-        {
-          id: 'mi',
-          src: '/media/mi.jpeg',
-          caption: 'And then there are all these people who love you…',
-          focus: '50% 28%',
-          alt: 'Mi',
-        },
-        {
-          id: 'oni',
-          src: '/media/oni.jpeg',
-          caption: 'And these ones, too.',
-          focus: '50% 30%',
-          alt: 'Oni',
-        },
-        {
-          id: 'milka',
-          src: '/media/milka.jpeg',
-          caption: 'These little ones would probably show it with a lick. 🐾',
-          focus: '50% 40%',
-          alt: 'Milka',
-        },
-        {
-          id: 'nora',
-          src: '/media/nora.jpeg',
-          caption: '[PLACEHOLDER: a short note for Nora.]',
-          focus: '50% 38%',
-          alt: 'Nora',
-        },
-        {
-          id: 'liam',
-          src: '/media/liam.jpeg',
-          caption: '[PLACEHOLDER: a short note for Liam.]',
-          focus: '50% 32%',
-          alt: 'Liam',
-        },
-        {
-          id: 'lenon',
-          src: '/media/lenon.JPG',
-          caption: 'We all have our own ways of showing it. But we all love you.',
-          focus: '50% 30%',
-          alt: 'Lenon',
-        },
-      ],
     },
     singAndDance: {
       videoSrc: '/media/singing-or-dancing.mp4',
